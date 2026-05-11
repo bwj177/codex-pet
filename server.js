@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
@@ -9,8 +10,10 @@ const root = __dirname;
 const port = Number(process.env.CODEX_PET_PORT || 4177);
 const host = process.env.CODEX_PET_HOST || "127.0.0.1";
 const stateFile = process.env.CODEX_PET_STATE || path.join(root, "runtime", "session-state.json");
+const tokenFile = path.join(path.dirname(stateFile), "auth-token");
 
 const clients = new Set();
+let authToken = "";
 let state = {
   status: "idle",
   contextUsage: 0.42,
@@ -33,6 +36,20 @@ let state = {
 
 function ensureRuntimeDir() {
   fs.mkdirSync(path.dirname(stateFile), { recursive: true });
+}
+
+function loadOrCreateAuthToken() {
+  try {
+    const stored = fs.readFileSync(tokenFile, "utf8").trim();
+    if (stored) return stored;
+  } catch {}
+
+  return process.env.CODEX_PET_AUTH_TOKEN || crypto.randomBytes(24).toString("hex");
+}
+
+function persistAuthToken() {
+  ensureRuntimeDir();
+  fs.writeFileSync(tokenFile, `${authToken}\n`, { mode: 0o600 });
 }
 
 function loadStateFromDisk() {
@@ -80,6 +97,12 @@ function sendJson(res, statusCode, payload) {
   res.end(body);
 }
 
+function isAuthorized(req, url) {
+  const headerToken = req.headers["x-codex-pet-token"];
+  const queryToken = url.searchParams.get("token");
+  return headerToken === authToken || queryToken === authToken;
+}
+
 function readRequestBody(req) {
   return new Promise((resolve, reject) => {
     let body = "";
@@ -114,7 +137,8 @@ function handleEvents(req, res) {
   req.on("close", () => clients.delete(res));
 }
 
-async function handleApi(req, res, pathname) {
+async function handleApi(req, res, url) {
+  const pathname = url.pathname;
   if (pathname === "/api/state" && req.method === "GET") {
     sendJson(res, 200, state);
     return;
@@ -172,6 +196,8 @@ function serveStatic(res, pathname) {
 }
 
 ensureRuntimeDir();
+authToken = loadOrCreateAuthToken();
+persistAuthToken();
 loadStateFromDisk();
 
 fs.watchFile(stateFile, { interval: 500 }, () => {
@@ -183,12 +209,20 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || `${host}:${port}`}`);
 
   if (url.pathname === "/events") {
+    if (!isAuthorized(req, url)) {
+      sendJson(res, 401, { error: "Unauthorized" });
+      return;
+    }
     handleEvents(req, res);
     return;
   }
 
   if (url.pathname.startsWith("/api/")) {
-    await handleApi(req, res, url.pathname);
+    if (!isAuthorized(req, url)) {
+      sendJson(res, 401, { error: "Unauthorized" });
+      return;
+    }
+    await handleApi(req, res, url);
     return;
   }
 

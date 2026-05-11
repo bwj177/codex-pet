@@ -124,6 +124,7 @@ let skin = loadSkin();
 let petLibrary = [];
 
 const desktopMode = new URLSearchParams(window.location.search).get("desktop") === "1";
+const runtimeToken = new URLSearchParams(window.location.search).get("token") || "";
 if (desktopMode) {
   document.documentElement.classList.add("desktop-mode");
   state.position = { x: 24, y: 210 };
@@ -256,7 +257,8 @@ class LayeredPetModel {
 const petModel = new LayeredPetModel(dom.pet);
 
 function connectRuntime() {
-  fetch("/api/state")
+  const stateUrl = withRuntimeToken("/api/state");
+  fetch(stateUrl)
     .then((response) => (response.ok ? response.json() : null))
     .then((nextState) => {
       if (nextState) updateFromRuntime(nextState);
@@ -267,13 +269,19 @@ function connectRuntime() {
 
   if (!("EventSource" in window)) return;
 
-  const events = new EventSource("/events");
+  const events = new EventSource(withRuntimeToken("/events"));
   events.addEventListener("state", (event) => {
     updateFromRuntime(JSON.parse(event.data));
   });
   events.addEventListener("error", () => {
     dom.sessionState.textContent = "Runtime Reconnecting";
   });
+}
+
+function withRuntimeToken(pathname) {
+  if (!runtimeToken) return pathname;
+  const separator = pathname.includes("?") ? "&" : "?";
+  return `${pathname}${separator}token=${encodeURIComponent(runtimeToken)}`;
 }
 
 function updateFromRuntime(nextState) {

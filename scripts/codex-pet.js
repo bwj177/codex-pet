@@ -8,6 +8,7 @@ const { execFileSync, spawn } = require("node:child_process");
 
 const root = path.resolve(__dirname, "..");
 const runtimeDir = path.join(root, "runtime");
+const tokenFile = path.join(runtimeDir, "auth-token");
 const serverLog = path.join(runtimeDir, "server.log");
 const host = process.env.CODEX_PET_HOST || "127.0.0.1";
 const port = Number(process.env.CODEX_PET_PORT || 4177);
@@ -112,21 +113,26 @@ Examples:
 }
 
 function requestJson(method, pathname, payload) {
+  const authToken = getAuthToken();
+  const requestPath = withToken(pathname, authToken);
   const body = payload ? JSON.stringify(payload) : "";
   return new Promise((resolve, reject) => {
     const req = http.request(
       {
         hostname: host,
         port,
-        path: pathname,
+        path: requestPath,
         method,
         timeout: 1200,
-        headers: body
-          ? {
-              "content-type": "application/json",
-              "content-length": Buffer.byteLength(body)
-            }
-          : undefined
+        headers: {
+          ...(body
+            ? {
+                "content-type": "application/json",
+                "content-length": Buffer.byteLength(body)
+              }
+            : {}),
+          "x-codex-pet-token": authToken
+        }
       },
       (res) => {
         let responseBody = "";
@@ -201,6 +207,31 @@ function getDisclosurePolicy() {
     tokenUsage: "simulated-until-codex-events-available",
     contextUsage: "simulated-until-codex-events-available"
   };
+}
+
+function getAuthToken() {
+  try {
+    const token = fs.readFileSync(tokenFile, "utf8").trim();
+    if (token) return token;
+  } catch {}
+
+  return ensureAuthToken();
+}
+
+function ensureAuthToken() {
+  const existing = process.env.CODEX_PET_AUTH_TOKEN;
+  if (existing) return existing;
+
+  const token = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+  fs.mkdirSync(runtimeDir, { recursive: true });
+  fs.writeFileSync(tokenFile, `${token}\n`, { mode: 0o600 });
+  process.env.CODEX_PET_AUTH_TOKEN = token;
+  return token;
+}
+
+function withToken(pathname, token) {
+  const separator = pathname.includes("?") ? "&" : "?";
+  return `${pathname}${separator}token=${encodeURIComponent(token)}`;
 }
 
 function getWorkspaceSnapshot() {
@@ -293,12 +324,14 @@ function buildCommandPreview(codexCommand, args) {
 
 function startRuntime() {
   const out = fs.openSync(serverLog, "a");
+  const authToken = ensureAuthToken();
   const child = spawn(process.execPath, [path.join(root, "server.js")], {
     cwd: root,
     detached: true,
     stdio: ["ignore", out, out],
     env: {
       ...process.env,
+      CODEX_PET_AUTH_TOKEN: authToken,
       CODEX_PET_HOST: host,
       CODEX_PET_PORT: String(port)
     }
@@ -321,10 +354,11 @@ function openPetWindow() {
     return;
   }
 
+  const petUrl = buildPetUrl();
   const commands = {
-    darwin: ["open", [`${baseUrl}/?desktop=1`]],
-    win32: ["cmd", ["/c", "start", "", baseUrl]],
-    linux: ["xdg-open", [baseUrl]]
+    darwin: ["open", [petUrl]],
+    win32: ["cmd", ["/c", "start", "", petUrl]],
+    linux: ["xdg-open", [petUrl]]
   };
   const command = commands[process.platform];
   if (!command) return;
@@ -356,7 +390,7 @@ function openDesktopPet() {
 }
 
 function spawnDesktop(binary) {
-  const child = spawn(binary, [`${baseUrl}/?desktop=1`], {
+  const child = spawn(binary, [buildPetUrl()], {
     detached: true,
     stdio: "ignore"
   });
@@ -365,12 +399,16 @@ function spawnDesktop(binary) {
 }
 
 function openBrowserFallback() {
-  const child = spawn("open", [`${baseUrl}/?desktop=1`], {
+  const child = spawn("open", [buildPetUrl()], {
     detached: true,
     stdio: "ignore"
   });
   child.on("error", () => {});
   child.unref();
+}
+
+function buildPetUrl() {
+  return `${baseUrl}/?desktop=1&token=${encodeURIComponent(getAuthToken())}`;
 }
 
 async function runCodex() {
