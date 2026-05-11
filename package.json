@@ -1,0 +1,18 @@
+{
+  "name": "codex-pet",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "codex-pet": "node scripts/codex-pet.js",
+    "build-desktop": "node scripts/build-desktop.js",
+    "pet": "node scripts/petctl.js",
+    "install-bin": "node scripts/install-bin.js",
+    "uninstall-bin": "node scripts/uninstall-bin.js",
+    "check": "node --check server.js && node --check scripts/petctl.js && node --check scripts/codex-pet.js && node --check scripts/build-desktop.js && node --check scripts/install-bin.js && node --check scripts/uninstall-bin.js && node --check src/main.js"
+  },
+  "bin": {
+    "codex-pet": "scripts/codex-pet.js"
+  }
+}

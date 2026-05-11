@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Codex Pet</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main id="app" aria-label="Codex Pet desktop companion">
+      <section id="desktop" class="desktop">
+        <div id="pet" class="pet-shell" role="button" aria-label="Codex Pet">
+          <div class="speech" id="speech">Ready.</div>
+          <div class="pet-stage" id="petStage">
+            <div class="shadow"></div>
+            <img id="skinImage" class="skin-image" alt="" />
+            <div class="tail"></div>
+            <div class="body">
+              <div class="badge" id="statusBadge"></div>
+              <div class="arm arm-left"></div>
+              <div class="arm arm-right"></div>
+              <div class="head">
+                <div class="ear ear-left"></div>
+                <div class="ear ear-right"></div>
+                <div class="hair hair-a"></div>
+                <div class="hair hair-b"></div>
+                <div class="eye eye-left"><span></span></div>
+                <div class="eye eye-right"><span></span></div>
+                <div class="mouth" id="mouth"></div>
+                <div class="cheek cheek-left"></div>
+                <div class="cheek cheek-right"></div>
+              </div>
+              <div class="leg leg-left"></div>
+              <div class="leg leg-right"></div>
+            </div>
+          </div>
+        </div>
+
+        <aside id="panel" class="panel" aria-label="Codex metadata panel">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">Codex Pet</p>
+              <h1 id="petName">Mochi</h1>
+            </div>
+            <button id="closePanel" class="icon-button" title="Close" aria-label="Close">x</button>
+          </header>
+
+          <div class="status-card">
+            <div>
+              <p class="label">Session State</p>
+              <strong id="sessionState">Idle</strong>
+            </div>
+            <div class="meter" aria-label="Context usage">
+              <span id="contextMeter"></span>
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="metric">
+              <span>Context</span>
+              <strong id="contextUsage">42%</strong>
+            </div>
+            <div class="metric">
+              <span>Tokens</span>
+              <strong id="tokenUsage">18.2k</strong>
+            </div>
+            <div class="metric">
+              <span>Model</span>
+              <strong id="modelName">gpt-5.4</strong>
+            </div>
+            <div class="metric">
+              <span>Runtime</span>
+              <strong id="runtime">00:04</strong>
+            </div>
+            <div class="metric">
+              <span>Branch</span>
+              <strong id="gitBranch">none</strong>
+            </div>
+            <div class="metric">
+              <span>Files</span>
+              <strong id="changedCount">0</strong>
+            </div>
+          </div>
+
+          <section class="panel-section">
+            <h2>Current Work</h2>
+            <p id="summary">Waiting for Codex activity.</p>
+          </section>
+
+          <section class="panel-section">
+            <h2>Appearance</h2>
+            <div class="appearance-grid">
+              <label>
+                <span>Name</span>
+                <input id="skinName" type="text" maxlength="18" value="Mochi" />
+              </label>
+              <label>
+                <span>Mode</span>
+                <select id="skinMode">
+                  <option value="procedural">Procedural</option>
+                  <option value="image">Image</option>
+                </select>
+              </label>
+              <label>
+                <span>Preset</span>
+                <select id="skinPreset">
+                  <option value="mochi">Mochi</option>
+                  <option value="terminal">Terminal</option>
+                  <option value="ember">Ember</option>
+                  <option value="cloud">Cloud</option>
+                </select>
+              </label>
+              <label>
+                <span>Body</span>
+                <input id="skinBody" type="color" value="#65d6c8" />
+              </label>
+              <label>
+                <span>Head</span>
+                <input id="skinHead" type="color" value="#f4b45f" />
+              </label>
+              <label>
+                <span>Accent</span>
+                <input id="skinAccent" type="color" value="#f0a256" />
+              </label>
+              <label>
+                <span>Outline</span>
+                <input id="skinOutline" type="color" value="#222832" />
+              </label>
+              <label>
+                <span>Scale</span>
+                <input id="skinScale" type="range" min="85" max="125" value="100" />
+              </label>
+              <label>
+                <span>Eyes</span>
+                <select id="skinEyes">
+                  <option value="round">Round</option>
+                  <option value="calm">Calm</option>
+                  <option value="spark">Spark</option>
+                </select>
+              </label>
+              <label>
+                <span>Image Fit</span>
+                <select id="skinImageFit">
+                  <option value="contain">Contain</option>
+                  <option value="cover">Cover</option>
+                </select>
+              </label>
+              <label>
+                <span>Built-in Pet</span>
+                <select id="skinLibraryAsset">
+                  <option value="">None</option>
+                </select>
+              </label>
+              <label>
+                <span>Image Size</span>
+                <input id="skinImageScale" type="range" min="70" max="150" value="100" />
+              </label>
+              <label>
+                <span>Image X</span>
+                <input id="skinImageOffsetX" type="range" min="-60" max="60" value="0" />
+              </label>
+              <label>
+                <span>Image Y</span>
+                <input id="skinImageOffsetY" type="range" min="-60" max="60" value="0" />
+              </label>
+              <label class="toggle-row">
+                <span>Ears</span>
+                <input id="skinEars" type="checkbox" checked />
+              </label>
+              <label class="toggle-row">
+                <span>Tail</span>
+                <input id="skinTail" type="checkbox" checked />
+              </label>
+              <label class="toggle-row">
+                <span>Default Parts</span>
+                <input id="skinShowParts" type="checkbox" checked />
+              </label>
+              <label class="file-row">
+                <span>Role Image</span>
+                <input id="skinImageFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
+              </label>
+            </div>
+            <div class="appearance-actions">
+              <button id="copySkin" type="button">Copy JSON</button>
+              <button id="clearSkinImage" type="button">Remove Image</button>
+              <button id="resetSkin" type="button">Reset</button>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <h2>Workspace</h2>
+            <code id="workspacePath">unknown</code>
+          </section>
+
+          <section class="panel-section">
+            <h2>Recent Command</h2>
+            <code id="recentCommand">none</code>
+          </section>
+
+          <section class="panel-section">
+            <h2>Codex Metadata</h2>
+            <ul class="metadata-list">
+              <li><span>Session</span><strong id="sessionId">global</strong></li>
+              <li><span>CLI</span><strong id="codexVersion">unknown</strong></li>
+              <li><span>Sandbox</span><strong id="sandboxMode">unknown</strong></li>
+              <li><span>Approval</span><strong id="approvalPolicy">unknown</strong></li>
+              <li><span>Privacy</span><strong id="privacyMode">standard</strong></li>
+              <li><span>Usage Source</span><strong id="usageSource">simulated</strong></li>
+            </ul>
+          </section>
+
+          <section class="panel-section">
+            <h2>Changed Files</h2>
+            <ul id="changedFiles"></ul>
+          </section>
+
+          <footer class="controls">
+            <button data-status="thinking">Thinking</button>
+            <button data-status="running_command">Run</button>
+            <button data-status="error">Error</button>
+            <button data-status="success">Pass</button>
+            <button data-status="waiting_user">Wait</button>
+          </footer>
+        </aside>
+      </section>
+    </main>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

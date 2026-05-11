@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "kenney-elephant",
+      "name": "Kenney Elephant",
+      "src": "./assets/pets/kenney-animal-pack/elephant.png",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/animal-pack",
+      "license": "CC0"
+    },
+    {
+      "id": "kenney-giraffe",
+      "name": "Kenney Giraffe",
+      "src": "./assets/pets/kenney-animal-pack/giraffe.png",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/animal-pack",
+      "license": "CC0"
+    },
+    {
+      "id": "kenney-hippo",
+      "name": "Kenney Hippo",
+      "src": "./assets/pets/kenney-animal-pack/hippo.png",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/animal-pack",
+      "license": "CC0"
+    },
+    {
+      "id": "kenney-monkey",
+      "name": "Kenney Monkey",
+      "src": "./assets/pets/kenney-animal-pack/monkey.png",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/animal-pack",
+      "license": "CC0"
+    },
+    {
+      "id": "kenney-panda",
+      "name": "Kenney Panda",
+      "src": "./assets/pets/kenney-animal-pack/panda.png",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/animal-pack",
+      "license": "CC0"
+    },
+    {
+      "id": "kenney-parrot",
+      "name": "Kenney Parrot",
+      "src": "./assets/pets/kenney-animal-pack/parrot.png",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/animal-pack",
+      "license": "CC0"
+    },
+    {
+      "id": "kenney-penguin",
+      "name": "Kenney Penguin",
+      "src": "./assets/pets/kenney-animal-pack/penguin.png",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/animal-pack",
+      "license": "CC0"
+    },
+    {
+      "id": "kenney-pig",
+      "name": "Kenney Pig",
+      "src": "./assets/pets/kenney-animal-pack/pig.png",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/animal-pack",
+      "license": "CC0"
+    },
+    {
+      "id": "kenney-rabbit",
+      "name": "Kenney Rabbit",
+      "src": "./assets/pets/kenney-animal-pack/rabbit.png",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/animal-pack",
+      "license": "CC0"
+    },
+    {
+      "id": "kenney-snake",
+      "name": "Kenney Snake",
+      "src": "./assets/pets/kenney-animal-pack/snake.png",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/animal-pack",
+      "license": "CC0"
+    },
+    {
+      "id": "opengameart-cat",
+      "name": "OpenGameArt Cat",
+      "src": "./assets/pets/opengameart-cat/cat.png",
+      "author": "Noob",
+      "source": "https://opengameart.org/content/2d-cat-sprite",
+      "license": "CC0"
+    }
+  ]
+}

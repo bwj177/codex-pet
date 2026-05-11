@@ -1,0 +1,14 @@
+# runtime state (contains local paths, PIDs, session info)
+runtime/
+
+# build artifacts
+dist/
+
+# IDE
+.idea/
+
+# dependencies
+node_modules/
+
+# OS
+.DS_Store

@@ -1,0 +1,58 @@
+{
+  "id": "mochi-live2d-ready",
+  "name": "Mochi",
+  "version": "0.1.0",
+  "personality": "calm reviewer",
+  "renderer": {
+    "preferred": "layered-2d",
+    "fallback": "layered-2d",
+    "live2d": {
+      "model3": "assets/live2d/mochi/mochi.model3.json"
+    }
+  },
+  "catchphrases": {
+    "idle": "I am watching the workspace.",
+    "hover": "Need the session panel?",
+    "thinking": "Thinking through the next move.",
+    "running_command": "Command is running.",
+    "error": "Something failed. Logs first.",
+    "success": "Checks are green.",
+    "waiting_user": "Codex is waiting for you.",
+    "context_high": "Context is getting full."
+  },
+  "behaviors": [
+    {
+      "when": "status == 'running_command'",
+      "motion": "typing",
+      "expression": "focused",
+      "badge": "RUN",
+      "bubble": "Command is running.",
+      "priority": 60
+    },
+    {
+      "when": "status == 'error'",
+      "motion": "shake",
+      "expression": "alert",
+      "badge": "ERR",
+      "bubble": "Something failed. Logs first.",
+      "priority": 90
+    },
+    {
+      "when": "contextUsage > 0.84",
+      "motion": "tired",
+      "expression": "tired",
+      "badge": "CTX",
+      "bubble": "Context is getting full.",
+      "priority": 80
+    }
+  ],
+  "hitAreas": {
+    "head": {
+      "onClick": "tap_head",
+      "onHover": "look_at_cursor"
+    },
+    "body": {
+      "onClick": "open_status_panel"
+    }
+  }
+}
