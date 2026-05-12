@@ -123,8 +123,10 @@ const state = {
 let skin = loadSkin();
 let petLibrary = [];
 
-const desktopMode = new URLSearchParams(window.location.search).get("desktop") === "1";
-const runtimeToken = new URLSearchParams(window.location.search).get("token") || "";
+const runtimeParams = new URLSearchParams(window.location.search);
+const desktopMode = runtimeParams.get("desktop") === "1";
+const runtimeToken = runtimeParams.get("token") || "";
+const runtimeSessionId = runtimeParams.get("session") || "";
 if (desktopMode) {
   document.documentElement.classList.add("desktop-mode");
   state.position = { x: 24, y: 210 };
@@ -279,9 +281,12 @@ function connectRuntime() {
 }
 
 function withRuntimeToken(pathname) {
-  if (!runtimeToken) return pathname;
+  const params = new URLSearchParams();
+  if (runtimeToken) params.set("token", runtimeToken);
+  if (runtimeSessionId) params.set("session", runtimeSessionId);
+  if (params.size === 0) return pathname;
   const separator = pathname.includes("?") ? "&" : "?";
-  return `${pathname}${separator}token=${encodeURIComponent(runtimeToken)}`;
+  return `${pathname}${separator}${params.toString()}`;
 }
 
 function updateFromRuntime(nextState) {

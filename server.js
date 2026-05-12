@@ -7,35 +7,43 @@ const path = require("node:path");
 const { URL } = require("node:url");
 
 const root = __dirname;
+const runtimeDir = path.join(root, "runtime");
+const sessionsDir = path.join(runtimeDir, "sessions");
+const legacyStateFile = path.join(runtimeDir, "session-state.json");
+const activeSessionFile = path.join(runtimeDir, "active-session");
 const port = Number(process.env.CODEX_PET_PORT || 4177);
 const host = process.env.CODEX_PET_HOST || "127.0.0.1";
-const stateFile = process.env.CODEX_PET_STATE || path.join(root, "runtime", "session-state.json");
-const tokenFile = path.join(path.dirname(stateFile), "auth-token");
+const tokenFile = path.join(runtimeDir, "auth-token");
 
-const clients = new Set();
+const sessionClients = new Map();
+const sessionStateCache = new Map();
 let authToken = "";
-let state = {
-  status: "idle",
-  contextUsage: 0.42,
-  tokens: 18240,
-  tokenSource: "simulated",
-  contextSource: "simulated",
-  model: "gpt-5.4",
-  codexVersion: "unknown",
-  codexPath: "unknown",
-  sessionId: "global",
-  privacyMode: "standard",
-  summary: "Codex Pet runtime is online.",
-  command: "node server.js",
-  commandDisclosure: "redacted",
-  cwd: process.cwd(),
-  gitBranch: "none",
-  changedFiles: ["server.js", "src/main.js"],
-  updatedAt: new Date().toISOString()
-};
+
+function createDefaultState(sessionId) {
+  return {
+    status: "idle",
+    contextUsage: 0.42,
+    tokens: 18240,
+    tokenSource: "simulated",
+    contextSource: "simulated",
+    model: "gpt-5.4",
+    codexVersion: "unknown",
+    codexPath: "unknown",
+    sessionId,
+    privacyMode: "standard",
+    summary: "Codex Pet runtime is online.",
+    command: "node server.js",
+    commandDisclosure: "redacted",
+    cwd: process.cwd(),
+    gitBranch: "none",
+    changedFiles: ["server.js", "src/main.js"],
+    updatedAt: new Date().toISOString()
+  };
+}
 
 function ensureRuntimeDir() {
-  fs.mkdirSync(path.dirname(stateFile), { recursive: true });
+  fs.mkdirSync(runtimeDir, { recursive: true });
+  fs.mkdirSync(sessionsDir, { recursive: true });
 }
 
 function loadOrCreateAuthToken() {
@@ -52,36 +60,96 @@ function persistAuthToken() {
   fs.writeFileSync(tokenFile, `${authToken}\n`, { mode: 0o600 });
 }
 
-function loadStateFromDisk() {
+function sanitizeSessionId(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "global";
+  return raw.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96) || "global";
+}
+
+function getActiveSessionId() {
   try {
-    if (!fs.existsSync(stateFile)) {
-      persistState();
-      return;
-    }
-    const parsed = JSON.parse(fs.readFileSync(stateFile, "utf8"));
-    state = normalizeState({ ...state, ...parsed });
-  } catch (error) {
-    state = normalizeState({
-      ...state,
-      status: "error",
-      summary: `Failed to read runtime state: ${error.message}`
-    });
-  }
+    const stored = fs.readFileSync(activeSessionFile, "utf8").trim();
+    if (stored) return sanitizeSessionId(stored);
+  } catch {}
+  return "global";
 }
 
-function persistState() {
+function persistActiveSessionId(sessionId) {
   ensureRuntimeDir();
-  fs.writeFileSync(stateFile, `${JSON.stringify(state, null, 2)}\n`);
+  fs.writeFileSync(activeSessionFile, `${sessionId}\n`, { mode: 0o600 });
 }
 
-function normalizeState(next) {
+function getSessionFile(sessionId) {
+  return path.join(sessionsDir, `${sanitizeSessionId(sessionId)}.json`);
+}
+
+function normalizeState(next, previous) {
   return {
     ...next,
-    contextUsage: clamp(Number(next.contextUsage ?? state.contextUsage), 0, 1),
-    tokens: Math.max(0, Number(next.tokens ?? state.tokens) || 0),
+    sessionId: sanitizeSessionId(next.sessionId || previous.sessionId || "global"),
+    contextUsage: clamp(Number(next.contextUsage ?? previous.contextUsage), 0, 1),
+    tokens: Math.max(0, Number(next.tokens ?? previous.tokens) || 0),
     changedFiles: Array.isArray(next.changedFiles) ? next.changedFiles : [],
     updatedAt: new Date().toISOString()
   };
+}
+
+function loadLegacyState() {
+  try {
+    if (!fs.existsSync(legacyStateFile)) return null;
+    return JSON.parse(fs.readFileSync(legacyStateFile, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function loadSessionState(sessionId) {
+  const normalizedSessionId = sanitizeSessionId(sessionId);
+  if (sessionStateCache.has(normalizedSessionId)) {
+    return sessionStateCache.get(normalizedSessionId);
+  }
+
+  const sessionFile = getSessionFile(normalizedSessionId);
+  const fallback = createDefaultState(normalizedSessionId);
+
+  try {
+    if (fs.existsSync(sessionFile)) {
+      const parsed = JSON.parse(fs.readFileSync(sessionFile, "utf8"));
+      const state = normalizeState({ ...fallback, ...parsed, sessionId: normalizedSessionId }, fallback);
+      sessionStateCache.set(normalizedSessionId, state);
+      return state;
+    }
+  } catch (error) {
+    const broken = normalizeState(
+      {
+        ...fallback,
+        status: "error",
+        summary: `Failed to read runtime state: ${error.message}`
+      },
+      fallback
+    );
+    sessionStateCache.set(normalizedSessionId, broken);
+    return broken;
+  }
+
+  const legacy = loadLegacyState();
+  const initial = normalizeState(
+    legacy ? { ...fallback, ...legacy, sessionId: normalizedSessionId } : fallback,
+    fallback
+  );
+  sessionStateCache.set(normalizedSessionId, initial);
+  persistSessionState(normalizedSessionId, initial);
+  return initial;
+}
+
+function persistSessionState(sessionId, state) {
+  ensureRuntimeDir();
+  const normalizedSessionId = sanitizeSessionId(sessionId);
+  const normalizedState = normalizeState({ ...state, sessionId: normalizedSessionId }, createDefaultState(normalizedSessionId));
+  fs.writeFileSync(getSessionFile(normalizedSessionId), `${JSON.stringify(normalizedState, null, 2)}\n`);
+  sessionStateCache.set(normalizedSessionId, normalizedState);
+  persistActiveSessionId(normalizedSessionId);
+  return normalizedState;
 }
 
 function clamp(value, min, max) {
@@ -118,14 +186,22 @@ function readRequestBody(req) {
   });
 }
 
-function broadcast() {
+function resolveSessionId(url, patch) {
+  return sanitizeSessionId(url.searchParams.get("session") || patch?.sessionId || getActiveSessionId());
+}
+
+function broadcast(sessionId, state) {
+  const clients = sessionClients.get(sessionId);
+  if (!clients || clients.size === 0) return;
+
   const payload = `event: state\ndata: ${JSON.stringify(state)}\n\n`;
   for (const client of clients) {
     client.write(payload);
   }
 }
 
-function handleEvents(req, res) {
+function handleEvents(req, res, sessionId) {
+  const state = loadSessionState(sessionId);
   res.writeHead(200, {
     "content-type": "text/event-stream; charset=utf-8",
     "cache-control": "no-store",
@@ -133,14 +209,24 @@ function handleEvents(req, res) {
     "x-accel-buffering": "no"
   });
   res.write(`event: state\ndata: ${JSON.stringify(state)}\n\n`);
+
+  let clients = sessionClients.get(sessionId);
+  if (!clients) {
+    clients = new Set();
+    sessionClients.set(sessionId, clients);
+  }
   clients.add(res);
-  req.on("close", () => clients.delete(res));
+  req.on("close", () => {
+    clients.delete(res);
+    if (clients.size === 0) sessionClients.delete(sessionId);
+  });
 }
 
 async function handleApi(req, res, url) {
   const pathname = url.pathname;
   if (pathname === "/api/state" && req.method === "GET") {
-    sendJson(res, 200, state);
+    const sessionId = resolveSessionId(url);
+    sendJson(res, 200, loadSessionState(sessionId));
     return;
   }
 
@@ -148,10 +234,11 @@ async function handleApi(req, res, url) {
     try {
       const body = await readRequestBody(req);
       const patch = body ? JSON.parse(body) : {};
-      state = normalizeState({ ...state, ...patch });
-      persistState();
-      broadcast();
-      sendJson(res, 200, state);
+      const sessionId = resolveSessionId(url, patch);
+      const current = loadSessionState(sessionId);
+      const next = persistSessionState(sessionId, { ...current, ...patch, sessionId });
+      broadcast(sessionId, next);
+      sendJson(res, 200, next);
     } catch (error) {
       sendJson(res, 400, { error: error.message });
     }
@@ -198,12 +285,7 @@ function serveStatic(res, pathname) {
 ensureRuntimeDir();
 authToken = loadOrCreateAuthToken();
 persistAuthToken();
-loadStateFromDisk();
-
-fs.watchFile(stateFile, { interval: 500 }, () => {
-  loadStateFromDisk();
-  broadcast();
-});
+loadSessionState(getActiveSessionId());
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || `${host}:${port}`}`);
@@ -213,7 +295,7 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 401, { error: "Unauthorized" });
       return;
     }
-    handleEvents(req, res);
+    handleEvents(req, res, resolveSessionId(url));
     return;
   }
 
@@ -231,5 +313,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(port, host, () => {
   console.log(`Codex Pet runtime: http://${host}:${port}`);
-  console.log(`State file: ${stateFile}`);
+  console.log(`Sessions dir: ${sessionsDir}`);
 });

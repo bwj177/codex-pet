@@ -13,7 +13,8 @@ const serverLog = path.join(runtimeDir, "server.log");
 const host = process.env.CODEX_PET_HOST || "127.0.0.1";
 const port = Number(process.env.CODEX_PET_PORT || 4177);
 const baseUrl = `http://${host}:${port}`;
-const sessionId = process.env.CODEX_PET_SESSION_ID || makeSessionId();
+const requestedSessionId = process.env.CODEX_PET_SESSION_ID || "";
+const sessionId = requestedSessionId || makeSessionId();
 
 const options = {
   open: true,
@@ -114,7 +115,7 @@ Examples:
 
 function requestJson(method, pathname, payload) {
   const authToken = getAuthToken();
-  const requestPath = withToken(pathname, authToken);
+  const requestPath = withRuntimeQuery(pathname, authToken, payload?.sessionId);
   const body = payload ? JSON.stringify(payload) : "";
   return new Promise((resolve, reject) => {
     const req = http.request(
@@ -172,7 +173,7 @@ async function isRuntimeOnline() {
 }
 
 function getState() {
-  return requestJson("GET", "/api/state");
+  return requestJson("GET", "/api/state", requestedSessionId ? { sessionId } : undefined);
 }
 
 function postState(patch) {
@@ -232,6 +233,14 @@ function ensureAuthToken() {
 function withToken(pathname, token) {
   const separator = pathname.includes("?") ? "&" : "?";
   return `${pathname}${separator}token=${encodeURIComponent(token)}`;
+}
+
+function withRuntimeQuery(pathname, token, targetSessionId) {
+  const params = new URLSearchParams();
+  params.set("token", token);
+  if (targetSessionId) params.set("session", targetSessionId);
+  const separator = pathname.includes("?") ? "&" : "?";
+  return `${pathname}${separator}${params.toString()}`;
 }
 
 function getWorkspaceSnapshot() {
@@ -408,7 +417,12 @@ function openBrowserFallback() {
 }
 
 function buildPetUrl() {
-  return `${baseUrl}/?desktop=1&token=${encodeURIComponent(getAuthToken())}`;
+  const params = new URLSearchParams({
+    desktop: "1",
+    token: getAuthToken(),
+    session: sessionId
+  });
+  return `${baseUrl}/?${params.toString()}`;
 }
 
 async function runCodex() {
@@ -438,7 +452,9 @@ async function runCodex() {
     stdio: "inherit",
     env: {
       ...process.env,
-      CODEX_PET_URL: baseUrl
+      CODEX_PET_AUTH_TOKEN: getAuthToken(),
+      CODEX_PET_SESSION_ID: sessionId,
+      CODEX_PET_URL: buildPetUrl()
     }
   });
 

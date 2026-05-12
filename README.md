@@ -64,7 +64,7 @@ Native desktop binary:
 Local runtime state:
 
 ```text
-/Users/bytedance/codex-pet/runtime/session-state.json
+/Users/bytedance/codex-pet/runtime/sessions/<session-id>.json
 ```
 
 ## Desktop Pet Features
@@ -259,15 +259,15 @@ http://127.0.0.1:4177
 Endpoints:
 
 ```text
-GET  /api/state
-POST /api/state
-GET  /events
+GET  /api/state?token=...&session=...
+POST /api/state?token=...&session=...
+GET  /events?token=...&session=...
 ```
 
 Example update:
 
 ```bash
-curl -X POST http://127.0.0.1:4177/api/state \
+curl -X POST 'http://127.0.0.1:4177/api/state?token=<runtime-token>&session=<session-id>' \
   -H 'content-type: application/json' \
   -d '{"status":"running_command","summary":"Running checks","command":"npm test"}'
 ```
@@ -299,7 +299,7 @@ scripts/install-bin.js             Installs ~/.local/bin/codex-pet
 scripts/uninstall-bin.js           Removes ~/.local/bin/codex-pet symlink
 native/macos/CodexPetDesktop.swift macOS transparent WebKit desktop shell
 pet-package.example.json           Future skin/model package contract
-runtime/session-state.json         Current persisted runtime state
+runtime/sessions/{sessionId}.json Persisted runtime state per pet session
 ```
 
 ## Build And Verify
@@ -341,7 +341,6 @@ interface PetModel {
 
 High-priority pending work:
 
-- Multi-session isolation: store state under `runtime/sessions/{sessionId}.json` instead of one global state file.
 - True Codex token/context integration when Codex exposes stable machine-readable events.
 - System tray/menu bar controls: show, hide, quit, open status, restart runtime.
 - Persistent pet/window settings: last position, panel preference, personality.
